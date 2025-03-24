@@ -43,7 +43,7 @@ public class OverviewPage extends JFrame {
         loadSummary();
 
         Object[] columns = new String[]{
-            "เลขที่", "วันที่ออกตั๋ว", "ชื่อจริง", "นามสกุล", "เบอร์โทรศัพท์", "ราคา", "ระยะเวลา", "วันครบกำหนด", "เลขที่บิลเก่า", "เลขที่บิลใหม่", "", "", ""
+            "เลขที่", "วันที่ออกตั๋ว", "ชื่อจริง", "นามสกุล", "เบอร์โทรศัพท์", "ราคา", "ระยะเวลา", "วันครบกำหนด", "สถานะ", "เลขที่บิลเก่า", "เลขที่บิลใหม่", "", "", ""
         };
 
         tableModel = new DefaultTableModel(columns, 0) {
@@ -67,11 +67,11 @@ public class OverviewPage extends JFrame {
 
                 String ticketNo = table.getValueAt(row, 0).toString();
 
-                if (column == 10) {
+                if (column == 11) {
                     editTicket(row);
-                } else if (column == 11) {
-                    // Action for another button
                 } else if (column == 12) {
+                    actionPanel(ticketNo);
+                } else if (column == 13) {
                     viewTicket(ticketNo);
                 }
             }
@@ -139,6 +139,7 @@ public class OverviewPage extends JFrame {
                     rs.getInt("totalPrice"),
                     rs.getInt("duration"),
                     ADtoBE(rs.getDate("dueDate").toString()),
+                    rs.getString("status"),
                     rs.getString("old_ticket_No"),
                     rs.getString("new_ticket_No"),
                     "แก้ไข",
@@ -232,7 +233,7 @@ public class OverviewPage extends JFrame {
         if (option == JOptionPane.OK_OPTION) {
             try (Connection conn = db_Connection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(
-                     "INSERT INTO ticket VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                     "INSERT INTO ticket VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
     
                 // Validate input values
                 pstmt.setString(1, add0s(ticketNo));
@@ -243,6 +244,7 @@ public class OverviewPage extends JFrame {
                 pstmt.setInt(6, Integer.parseInt(priceField.getText())); // Ensure valid integer
                 pstmt.setInt(7, Integer.parseInt(durationField.getText())); // Ensure valid integer
                 pstmt.setDate(8, Date.valueOf(BEtoAD(dueDateField.getText()))); // Ensure valid date format
+                pstmt.setString(9, "อยู่ระหว่างจำนำ");
                 pstmt.setString(9, old_ticket_NoField.getText());
                 pstmt.setString(10, new_ticket_NoField.getText());
     
@@ -396,24 +398,24 @@ public class OverviewPage extends JFrame {
         SwingUtilities.invokeLater(() -> new TicketDetailPage(ticketNo));
     }    
 
-    private void actionPanel(){
+    private void actionPanel(String ticketNo){
         JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), "การดำเนินการตั๋ว", true);
         dialog.setSize(280, 300);  // Adjust the size of the popup
         dialog.setLayout(new FlowLayout()); // Use FlowLayout for better control
         dialog.setLocationRelativeTo(this);
 
         // Button size
-        Dimension buttonSize = new Dimension(240, 35); // Width x Height
+        Dimension buttonSize = new Dimension(100, 35); // Width x Height
 
         // Create buttons
         JButton withdrawAllBtn = new JButton("ถอนออกทั้งหมด");
         JButton renewTicketBtn = new JButton("ต่ออายุ");
-        JButton addMoreBtn = new JButton("เพิ่มของเข้าไป");
-        JButton payBackBtn = new JButton("จ่ายคืนต้น");
-        JButton withdrawSomeBtn = new JButton("ถอนออกบางส่วน");
+        JButton addMoreBtn = new JButton("เพิ่มเงินต้น");
+        JButton payBackBtn = new JButton("จ่ายคืนเงินต้น");
+        JButton withdrawSomeBtn = new JButton("แบ่งไถ่ถอน");
 
         // Set button font
-        Font buttonFont = new Font("TH Sarabun New", Font.BOLD, 16);
+        Font buttonFont = new Font("TH Sarabun New", Font.BOLD, 20);
         withdrawAllBtn.setFont(buttonFont);
         renewTicketBtn.setFont(buttonFont);
         addMoreBtn.setFont(buttonFont);
@@ -429,27 +431,27 @@ public class OverviewPage extends JFrame {
 
         // Add action listeners
         withdrawAllBtn.addActionListener(e -> {
-            withdrawAll(ticketNo);
+            // withdrawAll(ticketNo);
             dialog.dispose();
         });
 
         renewTicketBtn.addActionListener(e -> {
-            renewTicket(ticketNo);
+            // renewTicket(ticketNo);
             dialog.dispose();
         });
 
         addMoreBtn.addActionListener(e -> {
-            addMoreObjects(ticketNo);
+            // addMoreObjects(ticketNo);
             dialog.dispose();
         });
 
         payBackBtn.addActionListener(e -> {
-            payBackPrincipal(ticketNo);
+            // payBackPrincipal(ticketNo);
             dialog.dispose();
         });
 
         withdrawSomeBtn.addActionListener(e -> {
-            withdrawSomeObjects(ticketNo);
+            // withdrawSomeObjects(ticketNo);
             dialog.dispose();
         });
 
@@ -496,5 +498,26 @@ public class OverviewPage extends JFrame {
         }
         ticketNo += n;
         return ticketNo;
+    }
+
+    private int computeInterest(String ticketNo){
+        try (Connection conn = db_Connection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT CURDATE() AS today,  FROM ticket")) {
+
+            this.tableModel.setRowCount(0); // Clear existing rows
+
+            while (rs.next()) {
+                Object[] row = {
+                    rs.getString("_No"),
+                    ADtoBE(rs.getDate("issueDate").toString()),
+                    
+                };
+                this.tableModel.addRow(row);
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "โหลดข้อมูลไม่สำเร็จ", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        return 0;
     }
 }
