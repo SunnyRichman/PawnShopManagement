@@ -46,6 +46,7 @@ public class TicketDetailPage extends JFrame {
                 int totalPrice = rs.getInt("totalPrice");
                 int duration = rs.getInt("duration");
                 String dueDate = rs.getDate("dueDate").toString();
+                String redemptDate = rs.getDate("dueDate") != null ? rs.getDate("redemptDate").toString() : "-";
                 String old_ticket_No = rs.getString("old_ticket_No");
                 String new_ticket_No = rs.getString("new_ticket_No");
     
@@ -58,6 +59,7 @@ public class TicketDetailPage extends JFrame {
                     new JLabel("ราคารวม: "), new JLabel(Integer.toString(totalPrice)),
                     new JLabel("ระยะเวลา: "), new JLabel(Integer.toString(duration)),
                     new JLabel("วันครบกำหนด: "), new JLabel(ADtoBE(dueDate)),
+                    new JLabel("วันไถ่ถอน: "), new JLabel(ADtoBE(redemptDate)),
                     new JLabel("สถานะ: "), new JLabel(this.status),
                     new JLabel("เลขที่บิลเก่า: "), new JLabel(old_ticket_No),
                     new JLabel("เลขที่บิลใหม่: "), new JLabel(new_ticket_No)

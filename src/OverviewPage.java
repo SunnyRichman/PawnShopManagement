@@ -100,7 +100,11 @@ public class OverviewPage extends JFrame {
                 String ticketNo = table.getValueAt(row, 0).toString();
                 String status = table.getValueAt(row, 10).toString();
 
-                if (column == 13 && status.equals("อยู่ระหว่างจำนำ")) {
+                if(column == 10){
+                    JLabel statusLabel = new JLabel(status);
+                    statusLabel.setFont(new Font("TH SArabun New", Font.PLAIN, 20));
+                    JOptionPane.showMessageDialog(null, statusLabel, "สถานะ", JOptionPane.INFORMATION_MESSAGE);
+                }else if (column == 13 && status.equals("อยู่ระหว่างจำนำ")) {
                     editTicket(row);
                 } else if (column == 14 && status.equals("อยู่ระหว่างจำนำ")) {
                     actionPanel(ticketNo);
@@ -128,7 +132,7 @@ public class OverviewPage extends JFrame {
         try (Connection conn = db_Connection.getConnection();
              PreparedStatement stmtAll = conn.prepareStatement("SELECT SUM(totalPrice) AS net_totalPrice, COUNT(_No) AS totalQuantity FROM ticket WHERE status = 'อยู่ระหว่างจำนำ'");
              PreparedStatement stmtToday = conn.prepareStatement("SELECT SUM(totalPrice) AS net_totalPrice, COUNT(_No) AS totalQuantity FROM ticket WHERE issueDate = CURDATE()");
-             PreparedStatement stmtToday1 = conn.prepareStatement("SELECT SUM(redemptPrice) AS todayPriceWithdraw, COUNT(_No) AS todayQtyWithdraw FROM ticket WHERE redemptDate = CURDATE() AND status = 'ไถ่ถอนแล้ว'")) {
+             PreparedStatement stmtToday1 = conn.prepareStatement("SELECT SUM(redemptPrice) AS todayPriceWithdraw, COUNT(_No) AS todayQtyWithdraw FROM ticket WHERE redemptDate = CURDATE() AND (status = 'ไถ่ถอนแล้ว' OR status = 'ต่ออายุแล้ว' OR status LIKE 'เพิ่มเงินต้นจำนวน%')")) {
 
             int netTotalPriceAllDays = 0, totalQuantityAllDays = 0;
             int netTotalPriceToday = 0, totalQuantityToday = 0;
@@ -184,7 +188,7 @@ public class OverviewPage extends JFrame {
                     rs.getInt("redemptPrice"),
                     rs.getInt("duration"),
                     ADtoBE(rs.getDate("dueDate").toString()),
-                    rs.getDate("redemptDate") != null ? ADtoBE(rs.getDate("redemptDate").toString()) : "-",
+                    rs.getDate("redemptDate") != null ? ADtoBE(rs.getDate("redemptDate").toString()) : "",
                     rs.getString("status"),
                     rs.getString("old_ticket_No"),
                     rs.getString("new_ticket_No"),
@@ -201,27 +205,27 @@ public class OverviewPage extends JFrame {
 
     private void addTicket(){
         int ticketNo = 0;
+        String today = "";
         try (Connection conn = db_Connection.getConnection();
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT COUNT(_No) AS cnt FROM ticket")) {
+             ResultSet rs = stmt.executeQuery("SELECT COUNT(_No) AS cnt, CURDATE() AS today FROM ticket")) {
 
             if (rs.next()) {
                 ticketNo = rs.getInt("cnt");
+                today = rs.getDate("today").toString();
             }
 
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "โหลดข้อมูลไม่สำเร็จ", "Error", JOptionPane.ERROR_MESSAGE);
         }
         JLabel noField = new JLabel(add0s(ticketNo));
-        JTextField issueDateField = new JTextField();
+        JLabel issueDateField = new JLabel(ADtoBE(today));
         JTextField firstNameField = new JTextField();
         JTextField lastNameField = new JTextField();
         JTextField phoneField = new JTextField();
         JTextField priceField = new JTextField();
         JTextField durationField = new JTextField();
-        JTextField dueDateField = new JTextField();
-        JTextField old_ticket_NoField = new JTextField();
-        JTextField new_ticket_NoField = new JTextField();
+        // JTextField dueDateField = new JTextField();
     
         // Set font for text fields
         Font plain = new Font("TH Sarabun New", Font.PLAIN, 18);
@@ -232,9 +236,7 @@ public class OverviewPage extends JFrame {
         phoneField.setFont(plain);
         priceField.setFont(plain);
         durationField.setFont(plain);
-        dueDateField.setFont(plain);
-        old_ticket_NoField.setFont(plain);
-        new_ticket_NoField.setFont(plain);
+        // dueDateField.setFont(plain);
     
         // Create labels
         JLabel noLabel = new JLabel("เลขที่ตั๋ว:");
@@ -244,9 +246,7 @@ public class OverviewPage extends JFrame {
         JLabel phoneLabel = new JLabel("เบอร์โทรศัพท์:");
         JLabel priceLabel = new JLabel("ราคารวม:");
         JLabel durationLabel = new JLabel("ระยะเวลา:");
-        JLabel dueDateLabel = new JLabel("วันครบกำหนด:");
-        JLabel old_ticket_NoLabel = new JLabel("เลขที่ตั๋วเก่า:");
-        JLabel new_ticket_NoLabel = new JLabel("เลขที่ตั๋วใหม่:");
+        // JLabel dueDateLabel = new JLabel("วันครบกำหนด:");
     
         // Set font for labels
         Font bold = new Font("TH Sarabun New", Font.BOLD, 18);
@@ -257,9 +257,7 @@ public class OverviewPage extends JFrame {
         phoneLabel.setFont(bold);
         priceLabel.setFont(bold);
         durationLabel.setFont(bold);
-        dueDateLabel.setFont(bold);
-        old_ticket_NoLabel.setFont(bold);
-        new_ticket_NoLabel.setFont(bold);
+        // dueDateLabel.setFont(bold);
     
         // Create form layout
         Object[] message = {
@@ -270,9 +268,7 @@ public class OverviewPage extends JFrame {
             phoneLabel, phoneField,
             priceLabel, priceField,
             durationLabel, durationField,
-            dueDateLabel, dueDateField,
-            old_ticket_NoLabel, old_ticket_NoField,
-            new_ticket_NoLabel, new_ticket_NoField
+            // dueDateLabel, dueDateField
         };
     
         // Show the form
@@ -281,20 +277,15 @@ public class OverviewPage extends JFrame {
         if (option == JOptionPane.OK_OPTION) {
             try (Connection conn = db_Connection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(
-                     "INSERT INTO ticket(_No, issueDate, firstName, lastName, phoneNumber, totalPrice, duration, dueDate, status, old_ticket_No, new_ticket_No) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                    "INSERT INTO ticket(_No, issueDate, firstName, lastName, phoneNumber, totalPrice, duration, dueDate, status) VALUES ("+add0s(ticketNo)+", CURDATE(), ?, ?, ?, ?, ?, ADDDATE(CURDATE(), INTERVAL "+Integer.parseInt(durationField.getText())+" MONTH), 'อยู่ระหว่างจำนำ')")) {
     
                 // Validate input values
-                pstmt.setString(1, add0s(ticketNo));
-                pstmt.setDate(2, Date.valueOf(BEtoAD(issueDateField.getText()))); // Ensure valid date format
-                pstmt.setString(3, firstNameField.getText());
-                pstmt.setString(4, lastNameField.getText());
-                pstmt.setString(5, phoneField.getText());
-                pstmt.setInt(6, Integer.parseInt(priceField.getText())); // Ensure valid integer
-                pstmt.setInt(7, Integer.parseInt(durationField.getText())); // Ensure valid integer
-                pstmt.setDate(8, Date.valueOf(BEtoAD(dueDateField.getText()))); // Ensure valid date format
-                pstmt.setString(9, "อยู่ระหว่างจำนำ");
-                pstmt.setString(10, old_ticket_NoField.getText());
-                pstmt.setString(11, new_ticket_NoField.getText());
+                pstmt.setString(1, firstNameField.getText());
+                pstmt.setString(2, lastNameField.getText());
+                pstmt.setString(3, phoneField.getText());
+                pstmt.setInt(4, Integer.parseInt(priceField.getText())); 
+                pstmt.setInt(5, Integer.parseInt(durationField.getText()));
+                // pstmt.setDate(8, Date.valueOf(BEtoAD(dueDateField.getText()))); 
     
                 // Execute the insert operation
                 pstmt.executeUpdate();
@@ -307,6 +298,7 @@ public class OverviewPage extends JFrame {
                 loadTicket();
     
             } catch (SQLException | IllegalArgumentException e) {
+                e.printStackTrace();
                 JLabel fail = new JLabel("เพิ่มตั๋วไม่สำเร็จ");
                 fail.setFont(plain);
                 
@@ -326,16 +318,9 @@ public class OverviewPage extends JFrame {
         int totalPrice = (int) tableModel.getValueAt(row, 5);
         int duration = (int) tableModel.getValueAt(row, 7);
         String dueDate = tableModel.getValueAt(row, 8).toString();
-        String old_ticket_No = "";
-        String new_ticket_No = "";
-        if(tableModel.getValueAt(row, 11).toString() != null){
-            old_ticket_No = tableModel.getValueAt(row, 11).toString();    
-        }
-        if(tableModel.getValueAt(row, 12).toString() != null){
-            new_ticket_No = tableModel.getValueAt(row, 12).toString();
-        }
+        String old_ticket_No = tableModel.getValueAt(row, 11) != null ? tableModel.getValueAt(row, 11).toString() : "";
+        String new_ticket_No = tableModel.getValueAt(row, 12) != null ? tableModel.getValueAt(row, 12).toString() : "";
         
-
         // Create text fields and populate them with existing data
         JLabel noField = new JLabel(ticketNo);
         JTextField issueDateField = new JTextField(issueDate);
@@ -345,8 +330,8 @@ public class OverviewPage extends JFrame {
         JTextField priceField = new JTextField(String.valueOf(totalPrice));
         JTextField durationField = new JTextField(String.valueOf(duration));
         JTextField dueDateField = new JTextField(dueDate);
-        JTextField old_ticket_NoField = new JTextField(old_ticket_No);
-        JTextField new_ticket_NoField = new JTextField(new_ticket_No);
+        JLabel old_ticket_NoField = new JLabel(old_ticket_No);
+        JLabel new_ticket_NoField = new JLabel(new_ticket_No);
 
         // Set font for each text field
         Font plain = new Font("TH Sarabun New", Font.PLAIN, 18);
@@ -410,7 +395,7 @@ public class OverviewPage extends JFrame {
             if (confirm == JOptionPane.YES_OPTION) {
                 try (Connection conn = db_Connection.getConnection();
                         PreparedStatement pstmt = conn.prepareStatement(
-                        "UPDATE ticket SET issueDate = ?, firstName = ?, lastName = ?, phoneNumber = ?, totalPrice = ?, duration = ?, dueDate = ?, old_ticket_No = ?, new_ticket_No = ? WHERE _No = ?")) {
+                        "UPDATE ticket SET issueDate = ?, firstName = ?, lastName = ?, phoneNumber = ?, totalPrice = ?, duration = ?, dueDate = ? WHERE _No = ?")) {
 
                     // Set the new values from the text fields
                     pstmt.setDate(1, Date.valueOf(BEtoAD(issueDateField.getText())));
@@ -420,9 +405,7 @@ public class OverviewPage extends JFrame {
                     pstmt.setInt(5, Integer.parseInt(priceField.getText()));
                     pstmt.setInt(6, Integer.parseInt(durationField.getText()));
                     pstmt.setDate(7, Date.valueOf(BEtoAD(dueDateField.getText())));
-                    pstmt.setString(8, old_ticket_NoField.getText());
-                    pstmt.setString(9, new_ticket_NoField.getText());
-                    pstmt.setString(10, ticketNo);
+                    pstmt.setString(8, ticketNo);
 
                     // Execute the update
                     pstmt.executeUpdate();
@@ -491,15 +474,13 @@ public class OverviewPage extends JFrame {
         });
 
         renewTicketBtn.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, fail, "เกิดข้อผิดพลาด", JOptionPane.ERROR_MESSAGE);
-            // renewTicket(ticketNo);
-            // dialog.dispose();
+            renewTicket(ticketNo);
+            dialog.dispose();
         });
 
         addMoreBtn.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, fail, "เกิดข้อผิดพลาด", JOptionPane.ERROR_MESSAGE);
-            // gainPrincipal(ticketNo);
-            // dialog.dispose();
+            gainPrincipal(ticketNo);
+            dialog.dispose();
         });
 
         payBackBtn.addActionListener(e -> {
@@ -560,7 +541,11 @@ public class OverviewPage extends JFrame {
     }
 
     private void withdrawAll(String ticketNo){
-        try (Connection conn = db_Connection.getConnection();
+        JLabel isConfirm = new JLabel("คุณต้องการไถ่ถอนตั๋วหมายเลข "+ticketNo+" หรือไม่");
+        isConfirm.setFont(new Font("TH Sarabun New",Font.PLAIN, 20));
+        int confirm = JOptionPane.showConfirmDialog(this, isConfirm, "ยืนยันการอัปเดต", JOptionPane.YES_NO_OPTION);
+        if(confirm == JOptionPane.YES_OPTION){
+            try (Connection conn = db_Connection.getConnection();
             PreparedStatement pstmt = conn.prepareStatement("SELECT TIMESTAMPDIFF(MONTH, issueDate, CURDATE()) AS datediff, CURDATE() AS today, totalPrice FROM ticket WHERE _No = ?")) { // Fixed column name
             pstmt.setString(1, ticketNo);
             ResultSet rs = pstmt.executeQuery();
@@ -575,30 +560,255 @@ public class OverviewPage extends JFrame {
             }
 
             try (Connection conn1 = db_Connection.getConnection();
-            PreparedStatement pstmt1 = conn.prepareStatement("UPDATE ticket SET redemptPrice = ?, redemptDate = ?, status = ? WHERE _No = ?")) { // Fixed column name
-                pstmt1.setInt(1, computeInterest(totalPrice, datediff));
-                pstmt1.setString(2, today);
-                pstmt1.setString(3, "ไถ่ถอนแล้ว");
-                pstmt1.setString(4, ticketNo);
-                pstmt1.executeUpdate();
+                PreparedStatement pstmt1 = conn.prepareStatement("UPDATE ticket SET redemptPrice = ?, redemptDate = ?, status = ? WHERE _No = ?")) { // Fixed column name
+                    pstmt1.setInt(1, computeInterest(totalPrice, datediff));
+                    pstmt1.setString(2, today);
+                    pstmt1.setString(3, "ไถ่ถอนแล้ว");
+                    pstmt1.setString(4, ticketNo);
+                    pstmt1.executeUpdate();
 
+                } catch (SQLException e) {
+                    JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
+                    fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
+                    JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
+                }
+
+                JLabel success = new JLabel("<html>ไถ่ถอนตั๋วหมายเลข "+ticketNo+" สำเร็จ<br>จำนวนเงินต้น: "+totalPrice+" บาท<br>ดอกเบี้ย: "+((computeInterest(totalPrice, datediff))-totalPrice)+" บาท<br>รวมทั้งหมด "+computeInterest(totalPrice, datediff)+" บาท</html>");
+                success.setFont(new Font("TH Sarabun New", Font.BOLD, 18));
+                
+                JOptionPane.showMessageDialog(this, success);
+
+                loadTicket();
             } catch (SQLException e) {
-                JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
+                JLabel fail = new JLabel("ไถ่ถอนไม่สำเร็จ");
                 fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
                 JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
             }
-
-            JLabel success = new JLabel("ไถ่ถอนสำเร็จ");
-            success.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
-            JOptionPane.showMessageDialog(this, success);
-
-            loadTicket();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JLabel fail = new JLabel("ไถ่ถอนไม่สำเร็จ");
-            fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
-            // JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void renewTicket(String ticketNo){
+        JLabel isConfirm = new JLabel("คุณต้องการต่ออายุตั๋วหมายเลข "+ticketNo+" หรือไม่");
+        isConfirm.setFont(new Font("TH Sarabun New",Font.PLAIN, 20));
+        int confirm = JOptionPane.showConfirmDialog(this, isConfirm, "ยืนยันการอัปเดต", JOptionPane.YES_NO_OPTION);
+        if(confirm == JOptionPane.YES_OPTION){
+            int _No = 0;
+            try (Connection conn = db_Connection.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery("SELECT COUNT(_No) AS cnt FROM ticket")) {
+
+                if (rs.next()) {
+                    _No = rs.getInt("cnt");
+                }
+
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(this, "โหลดข้อมูลไม่สำเร็จ", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+
+            try (Connection conn = db_Connection.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement("SELECT TIMESTAMPDIFF(MONTH, issueDate, CURDATE()) AS datediff, CURDATE() AS today, totalPrice FROM ticket WHERE _No = ?")) { // Fixed column name
+                pstmt.setString(1, ticketNo);
+                ResultSet rs = pstmt.executeQuery();
+                int datediff = 0;
+                int totalPrice = 0;
+                String today = "";
+
+                if (rs.next()) {    
+                    datediff = rs.getInt("datediff");
+                    totalPrice = rs.getInt("totalPrice");
+                    today = rs.getDate("today").toString();
+                }
+
+                try (Connection conn1 = db_Connection.getConnection();
+                PreparedStatement pstmt1 = conn.prepareStatement("UPDATE ticket SET redemptPrice = ?, redemptDate = ?, status = ?, new_ticket_No = ? WHERE _No = ?")) { // Fixed column name
+                    pstmt1.setInt(1, computeInterest(totalPrice, datediff));
+                    pstmt1.setString(2, today);
+                    pstmt1.setString(3, "ต่ออายุแล้ว");
+                    pstmt1.setString(4, add0s(_No));
+                    pstmt1.setString(5, ticketNo);
+                    pstmt1.executeUpdate();
+
+                } catch (SQLException e) {
+                    JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
+                    fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
+                    JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
+                }
+
+                try (Connection conn2 = db_Connection.getConnection();
+                    PreparedStatement pstmt2 = conn.prepareStatement("SELECT CURDATE() AS today, firstName, lastName, phoneNumber, totalPrice, duration, ADDDATE(CURDATE(), INTERVAL duration MONTH) AS dueDate FROM ticket WHERE _No = ?")) {
+                        pstmt2.setString(1, ticketNo);
+                    ResultSet rs1 = pstmt2.executeQuery();
+
+                    if(rs1.next()){
+                        Object[] row = {
+                            rs1.getDate("today"),
+                            rs1.getString("firstName"),
+                            rs1.getString("lastName"),
+                            rs1.getString("phoneNumber"),
+                            rs1.getInt("totalPrice"),
+                            rs1.getInt("duration"),
+                            rs1.getDate("dueDate")
+                        };
+                        try (Connection conn3 = db_Connection.getConnection();
+                            PreparedStatement pstmt3 = conn.prepareStatement("INSERT INTO ticket(_No, issueDate, firstName, lastName, phoneNumber, totalPrice, duration, dueDate, status, old_ticket_No) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                                
+                                pstmt3.setString(1, add0s(_No));
+                                pstmt3.setDate(2, Date.valueOf(row[0].toString()));
+                                pstmt3.setString(3, row[1].toString());
+                                pstmt3.setString(4, row[2].toString());
+                                pstmt3.setString(5, row[3].toString());
+                                pstmt3.setInt(6, (int) row[4]);
+                                pstmt3.setInt(7, (int) row[5]);
+                                pstmt3.setDate(8, Date.valueOf(row[6].toString()));
+                                pstmt3.setString(9, "อยู่ระหว่างจำนำ");
+                                pstmt3.setString(10, ticketNo);
+
+                                pstmt3.executeUpdate();
+                        }
+                    }
+
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
+                    fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
+                    // JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
+                }
+
+                JLabel success = new JLabel("<html>ต่ออายุตั๋วหมายเลข "+ticketNo+" สำเร็จ<br>จำนวนเงินต้น: "+totalPrice+" บาท<br>ดอกเบี้ย: "+((computeInterest(totalPrice, datediff))-totalPrice)+" บาท<br>รวมทั้งหมด "+computeInterest(totalPrice, datediff)+" บาท</html>");
+                success.setFont(new Font("TH Sarabun New", Font.BOLD, 18));
+                
+                JOptionPane.showMessageDialog(this, success);
+
+                loadTicket();
+            } catch (SQLException e) {
+                JLabel fail = new JLabel("ต่ออายุไม่สำเร็จ");
+                fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
+                JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+        
+    private void gainPrincipal(String ticketNo){
+        JLabel reqLabel = new JLabel("จำนวนเงินที่ขอเพิ่ม:");
+        JLabel durLabel = new JLabel("ระยะเวลา:");
+
+        reqLabel.setFont(new Font("TH Sarabun New", Font.BOLD, 18));
+        durLabel.setFont(new Font("TH Sarabun New", Font.BOLD, 18));
+
+        JTextField reqField = new JTextField();
+        JTextField durField = new JTextField();
+
+        reqField.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
+        durField.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
+
+        int req = 0,dur = 0;
+        
+        Object message[] = {reqLabel, reqField,
+                            durLabel, durField};
+        int option = JOptionPane.showConfirmDialog(this, message, "เพิ่มเงินต้น", JOptionPane.YES_NO_OPTION);
+
+        
+        if (option == JOptionPane.YES_OPTION) {
+                req = Integer.parseInt(reqField.getText());
+                dur = Integer.parseInt(durField.getText());
+
+                int _No = 0;
+                try (Connection conn = db_Connection.getConnection();
+                    Statement stmt = conn.createStatement();
+                    ResultSet rs = stmt.executeQuery("SELECT COUNT(_No) AS cnt FROM ticket")) {
+
+                    if (rs.next()) {
+                        _No = rs.getInt("cnt");
+                    }
+
+                } catch (SQLException e) {
+                    JOptionPane.showMessageDialog(this, "โหลดข้อมูลไม่สำเร็จ", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+
+                try (Connection conn = db_Connection.getConnection();
+                    PreparedStatement pstmt = conn.prepareStatement("SELECT TIMESTAMPDIFF(MONTH, issueDate, CURDATE()) AS datediff, CURDATE() AS today, totalPrice FROM ticket WHERE _No = ?")) { // Fixed column name
+                    pstmt.setString(1, ticketNo);
+                    ResultSet rs = pstmt.executeQuery();
+                    int datediff = 0;
+                    int totalPrice = 0;
+                    String today = "";
+
+                    if (rs.next()) {    
+                        datediff = rs.getInt("datediff");
+                        totalPrice = rs.getInt("totalPrice");
+                        today = rs.getDate("today").toString();
+                    }
+
+                    try (Connection conn1 = db_Connection.getConnection();
+                    PreparedStatement pstmt1 = conn.prepareStatement("UPDATE ticket SET redemptPrice = ?, redemptDate = ?, status = ?, new_ticket_No = ? WHERE _No = ?")) { // Fixed column name
+                        pstmt1.setInt(1, computeInterest(totalPrice, datediff));
+                        pstmt1.setString(2, today);
+                        pstmt1.setString(3, "เพิ่มเงินต้นจำนวน "+req+" บาทแล้ว");
+                        pstmt1.setString(4, add0s(_No));
+                        pstmt1.setString(5, ticketNo);
+                        pstmt1.executeUpdate();
+
+                    } catch (SQLException e) {
+                        JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
+                        fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
+                        JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+
+                    try (Connection conn2 = db_Connection.getConnection();
+                        PreparedStatement pstmt2 = conn.prepareStatement("SELECT CURDATE() AS today, firstName, lastName, phoneNumber FROM ticket WHERE _No = ?")) {
+                            pstmt2.setString(1, ticketNo);
+                        ResultSet rs1 = pstmt2.executeQuery();
+
+                        if(rs1.next()){
+                            Object[] row = {
+                                rs1.getDate("today"),
+                                rs1.getString("firstName"),
+                                rs1.getString("lastName"),
+                                rs1.getString("phoneNumber"),
+                            };
+                            try (Connection conn3 = db_Connection.getConnection();
+                                PreparedStatement pstmt3 = conn.prepareStatement("INSERT INTO ticket(_No, issueDate, firstName, lastName, phoneNumber, totalPrice, duration, dueDate, status, old_ticket_No) VALUE (?, ?, ?, ?, ?, ?, ?, ADDDATE(CURDATE(), INTERVAL "+dur+" MONTH), ?, ?)")) {
+                                    
+                                    pstmt3.setString(1, add0s(_No));
+                                    pstmt3.setDate(2, Date.valueOf(row[0].toString()));
+                                    pstmt3.setString(3, row[1].toString());
+                                    pstmt3.setString(4, row[2].toString());
+                                    pstmt3.setString(5, row[3].toString());
+                                    pstmt3.setInt(6, totalPrice+req);
+                                    pstmt3.setInt(7, dur);
+                                    // pstmt3.setDate(8, Date.valueOf(row[5].toString()));
+                                    pstmt3.setString(8, "อยู่ระหว่างจำนำ");
+                                    pstmt3.setString(9, ticketNo);
+
+                                    pstmt3.executeUpdate();
+                            }
+                        }
+
+                    } catch (SQLException e) {
+                        // e.printStackTrace();
+                        JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
+                        fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
+                        JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+
+                    JLabel success = new JLabel("<html>เพิ่มเงินตั๋วหมายเลข " + ticketNo + "<br>" +
+                            "จำนวน " + req + " สำเร็จ<br>" +
+                            "จำนวนเงินต้นหลังเพิ่ม: " + (totalPrice + req) + " บาท<br>" +
+                            "จำนวนเงินต้นที่เพิ่มหลังหักดอกเบี้ย: " + ((req) - ((computeInterest(totalPrice, datediff)) - totalPrice)) + " บาท<br>" +
+                            "ดอกเบี้ย: " + ((computeInterest(totalPrice, datediff)) - totalPrice) + " บาท<br>" +
+                            "รวมทั้งหมด " + computeInterest(totalPrice, datediff) + " บาท</html>");
+
+                    success.setFont(new Font("TH Sarabun New", Font.BOLD, 18));
+                    JOptionPane.showMessageDialog(this, success);
+
+                    loadTicket();
+            } catch (SQLException e) {
+                JLabel fail = new JLabel("เพิ่มเงินต้นไม่สำเร็จ");
+                fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
+                JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }       
+
     }
     private int computeInterest(int principal, int _datediff) {
         if (principal >= 10000) {
