@@ -8,11 +8,13 @@ import javax.swing.table.DefaultTableModel;
 public class TicketDetailPage extends JFrame {
     
     private String ticketNo;
+    private String status;
     private DefaultTableModel tableModel;
     private JTable table;
 
-    public TicketDetailPage(String string) {
-        this.ticketNo = string;
+    public TicketDetailPage(String no, String _status) {
+        this.ticketNo = no;
+        this.status = _status;
         this.initialize();
     }
 
@@ -48,7 +50,7 @@ public class TicketDetailPage extends JFrame {
                 String new_ticket_No = rs.getString("new_ticket_No");
     
                 JLabel[] labels = {
-                    new JLabel("เลขที่ตั๋ว: "), new JLabel(ticketNo),
+                    new JLabel("เลขที่ตั๋ว: "), new JLabel(this.ticketNo),
                     new JLabel("วันที่ออกตั๋ว: "), new JLabel(ADtoBE(issueDate)),
                     new JLabel("ชื่อ: "), new JLabel(firstName),
                     new JLabel("นามสกุล: "), new JLabel(lastName),
@@ -56,6 +58,7 @@ public class TicketDetailPage extends JFrame {
                     new JLabel("ราคารวม: "), new JLabel(Integer.toString(totalPrice)),
                     new JLabel("ระยะเวลา: "), new JLabel(Integer.toString(duration)),
                     new JLabel("วันครบกำหนด: "), new JLabel(ADtoBE(dueDate)),
+                    new JLabel("สถานะ: "), new JLabel(this.status),
                     new JLabel("เลขที่บิลเก่า: "), new JLabel(old_ticket_No),
                     new JLabel("เลขที่บิลใหม่: "), new JLabel(new_ticket_No)
                 };
@@ -97,7 +100,7 @@ public class TicketDetailPage extends JFrame {
                 int row = table.rowAtPoint(e.getPoint());
                 int column = table.columnAtPoint(e.getPoint());
 
-                if (column == 5) editObject(row);
+                if (column == 5  && status.equals("อยู่ระหว่างจำนำ")) editObject(row);
             }
         });
     
