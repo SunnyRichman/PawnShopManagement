@@ -46,7 +46,7 @@ public class TicketDetailPage extends JFrame {
                 int totalPrice = rs.getInt("totalPrice");
                 int duration = rs.getInt("duration");
                 String dueDate = rs.getDate("dueDate").toString();
-                String redemptDate = rs.getDate("dueDate") != null ? rs.getDate("redemptDate").toString() : "-";
+                String redemptDate = rs.getDate("redemptDate") != null ? ADtoBE(rs.getDate("redemptDate").toString()) : "";
                 String old_ticket_No = rs.getString("old_ticket_No");
                 String new_ticket_No = rs.getString("new_ticket_No");
     
@@ -59,7 +59,7 @@ public class TicketDetailPage extends JFrame {
                     new JLabel("ราคารวม: "), new JLabel(Integer.toString(totalPrice)),
                     new JLabel("ระยะเวลา: "), new JLabel(Integer.toString(duration)),
                     new JLabel("วันครบกำหนด: "), new JLabel(ADtoBE(dueDate)),
-                    new JLabel("วันไถ่ถอน: "), new JLabel(ADtoBE(redemptDate)),
+                    new JLabel("วันไถ่ถอน: "), new JLabel(redemptDate),
                     new JLabel("สถานะ: "), new JLabel(this.status),
                     new JLabel("เลขที่บิลเก่า: "), new JLabel(old_ticket_No),
                     new JLabel("เลขที่บิลใหม่: "), new JLabel(new_ticket_No)
@@ -89,11 +89,20 @@ public class TicketDetailPage extends JFrame {
         rightPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 20));
     
         // Assign tableModel to a class-level variable
-        this.tableModel = new DefaultTableModel(new Object[]{"ชิ้นที่", "จำนวน", "สินค้า", "น้ำหนัก", "ราคา", ""}, 0);
+        String columns[] = new String[]{"ชิ้นที่", "จำนวน", "สินค้า", "น้ำหนัก", "ราคา", ""};
+
+        tableModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        
         this.table = new JTable(this.tableModel); // Use this.tableModel
         this.table.setRowHeight(25);
         this.table.setFont(new Font("TH Sarabun New", Font.PLAIN, 20));
         this.table.getTableHeader().setFont(new Font("TH Sarabun New", Font.BOLD, 20));
+
 
         this.table.addMouseListener(new MouseAdapter() {
             @Override
@@ -111,7 +120,13 @@ public class TicketDetailPage extends JFrame {
         insertButton.setFont(new Font("TH Sarabun New", Font.BOLD, 20));
         insertButton.setPreferredSize(new Dimension(40, 40));
         insertButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        insertButton.addActionListener(e -> addObject());
+        if(this.status.equals("อยู่ระหว่างจำนำ")){
+            insertButton.addActionListener(e -> addObject());
+        }else{
+            JLabel fail = new JLabel("ตั๋วใบนี้ไม่ได้อยู่ระหว่างจำนำแล้ว ขออภัยในความไม่สะดวก");
+            fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 20));
+            insertButton.addActionListener(e -> JOptionPane.showMessageDialog(this, fail, "เกิดข้อผิดพลาด", JOptionPane.ERROR_MESSAGE));
+        }
     
         // Add components to the right panel
         rightPanel.add(insertButton, BorderLayout.NORTH);
