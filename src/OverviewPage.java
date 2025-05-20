@@ -250,7 +250,6 @@ public class OverviewPage extends JFrame {
     
 
     private void editTicket(int row) {
-        // Get the data from the ticket at the clicked row
         String ticketNo = tableModel.getValueAt(row, 0).toString();
         String issueDate = tableModel.getValueAt(row, 1).toString();
         String firstName = tableModel.getValueAt(row, 2).toString();
@@ -489,13 +488,14 @@ public class OverviewPage extends JFrame {
             try (Connection conn1 = db_Connection.getConnection();
                 PreparedStatement pstmt1 = conn.prepareStatement("UPDATE ticket SET redemptPrice = ?, redemptDate = ?, status = ? WHERE _No = ?")) { // Fixed column name
                     pstmt1.setInt(1, computeInterest(totalPrice, datediff));
-                    pstmt1.setString(2, today);
+                    pstmt1.setString(2, BEtoAD(today));
                     pstmt1.setString(3, "ไถ่ถอนแล้ว");
                     pstmt1.setString(4, ticketNo);
                     pstmt1.executeUpdate();
 
                 } catch (SQLException e) {
-                    JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
+                    // JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
+                    JLabel fail = new JLabel(e.getMessage());
                     fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
                     JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
                 }
@@ -566,10 +566,10 @@ public class OverviewPage extends JFrame {
                         };
                         try (Connection conn3 = db_Connection.getConnection();
                             PreparedStatement pstmt3 = conn3.prepareStatement(
-                                "INSERT INTO ticket(_No, issueDate, firstName, lastName, phoneNumber, totalPrice, duration, dueDate, status, old_ticket_No) VALUE ("+add0s(_No)+", ?, ?, ?, ?, ?, ?, ?, อยู่ระหว่างจำนำ, "+ticketNo+")"
+                                "INSERT INTO ticket(_No, issueDate, firstName, lastName, phoneNumber, totalPrice, duration, dueDate, status, old_ticket_No) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                             )) {
                                 
-                                // pstmt3.setString(1, add0s(_No));
+                                pstmt3.setString(1, add0s(_No));
                                 pstmt3.setDate(2, Date.valueOf(row[0].toString()));
                                 pstmt3.setString(3, row[1].toString());
                                 pstmt3.setString(4, row[2].toString());
@@ -577,15 +577,16 @@ public class OverviewPage extends JFrame {
                                 pstmt3.setInt(6, (int) row[4]);
                                 pstmt3.setInt(7, (int) row[5]);
                                 pstmt3.setDate(8, Date.valueOf(row[6].toString()));
-                                // pstmt3.setString(9, "อยู่ระหว่างจำนำ");
-                                // pstmt3.setString(10, ticketNo);
+                                pstmt3.setString(9, "อยู่ระหว่างจำนำ");
+                                pstmt3.setString(10, ticketNo);
 
                                 pstmt3.executeUpdate();
                         }
                     }
 
                 } catch (SQLException e) {
-                    JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
+                    JLabel fail = new JLabel(e.getMessage());
+                    // JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
                     fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
                     JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
                 }
@@ -732,7 +733,6 @@ public class OverviewPage extends JFrame {
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "โหลดข้อมูลไม่สำเร็จ", "Error", JOptionPane.ERROR_MESSAGE);
         }
-
         
         JLabel reqLabel = new JLabel("จำนวนเงินที่จะจ่ายคืน:");
         JLabel durLabel = new JLabel("ระยะเวลา:");
@@ -818,8 +818,7 @@ public class OverviewPage extends JFrame {
                     }
 
                 } catch (SQLException e) {
-                    // JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
-                    JLabel fail = new JLabel(e.getMessage());
+                    JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
                     fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
                     JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
                 }
@@ -846,15 +845,42 @@ public class OverviewPage extends JFrame {
     }
 
     private void withdrawSomeObjects(String ticketNo){
+        String msg="รายการสิ่งของที่อยู่ในระหว่างการจำนำ <br><table><tr><th>ลำดับที่</th><th>จำนวน</th><th>สินค้า</th><th>น้ำหนัก</th><th>ราคา</th></tr>";
+        try (Connection conn = db_Connection.getConnection();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT obj_id, amount, object, weight, price FROM objects WHERE ticketNo = "+ticketNo)) {
 
+            if (rs.next()) {
+                int obj_id = rs.getInt("obj_id");
+                int amount = rs.getInt("amount");
+                String object = rs.getString("object");
+                double weight = rs.getDouble("weight");
+                int price = rs.getInt("price");
+                msg += "<tr>"+
+                "<td>"+obj_id+"</td>"+"<td>"+amount+"</td>"+"<td>"+object+"</td>"+"<td>"+weight+"</td>"+"<td>"+price+"</td>"+
+                "</tr>";
+            }
+
+            msg += "</table>";
+                
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "โหลดข้อมูลไม่สำเร็จ", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private int computeInterest(int principal, int _datediff) {
+//         SELECT
+//     TIMESTAMPDIFF(MONTH, '2025-02-01', CURDATE()) AS months_total,
+//     DATEDIFF(CURDATE(), DATE_ADD('2025-02-01', INTERVAL TIMESTAMPDIFF(MONTH, '2025-02-01', CURDATE()) MONTH)) AS extra_days
+// FROM ticket WHERE _No = '00001';
         if (principal >= 10000) {
+            // 1-3 วัน = 0.75%, 4-10 วัน = 1%
             return principal + roundUp((int)(principal * 0.0125)) * (_datediff > 0 ? _datediff : 1);
-        } else if (principal < 10000 && principal >= 4000) {
+        } else if (principal < 10000 && principal > 2500) {
+            // ไม่เกิน 10 วัน = 1%
             return principal + roundUp((int)(principal * 0.015)) * (_datediff > 0 ? _datediff : 1);
         } else {
+            // เกินมา 1 วัน คิดเต็มเดือน
             return principal + roundUp((int)(principal * 0.02)) * (_datediff > 0 ? _datediff : 1);
         }
     }
@@ -945,7 +971,7 @@ public class OverviewPage extends JFrame {
         try (Connection conn = db_Connection.getConnection();
              PreparedStatement stmtAll = conn.prepareStatement("SELECT SUM(totalPrice) AS net_totalPrice, COUNT(_No) AS totalQuantity FROM ticket WHERE status = 'อยู่ระหว่างจำนำ'");
              PreparedStatement stmtToday = conn.prepareStatement("SELECT SUM(totalPrice) AS net_totalPrice, COUNT(_No) AS totalQuantity FROM ticket WHERE issueDate = CURDATE()");
-             PreparedStatement stmtToday1 = conn.prepareStatement("SELECT SUM(redemptPrice) AS todayPriceWithdraw, COUNT(_No) AS todayQtyWithdraw FROM ticket WHERE redemptDate = CURDATE() AND (status = 'ไถ่ถอนแล้ว' OR status = 'ต่ออายุแล้ว' OR status LIKE 'เพิ่มเงินต้นจำนวน%')")) {
+             PreparedStatement stmtToday1 = conn.prepareStatement("SELECT SUM(redemptPrice) AS todayPriceWithdraw, COUNT(_No) AS todayQtyWithdraw FROM ticket WHERE redemptDate = CURDATE() AND (status = 'ไถ่ถอนแล้ว' OR status = 'ต่ออายุแล้ว' OR status LIKE 'เพิ่มเงินต้นจำนวน%' OR status LIKE 'ลดเงินต้นจำนวน%')")) {
 
             int netTotalPriceAllDays = 0, totalQuantityAllDays = 0;
             int netTotalPriceToday = 0, totalQuantityToday = 0;
@@ -998,4 +1024,6 @@ public class OverviewPage extends JFrame {
             JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+
+
 }
