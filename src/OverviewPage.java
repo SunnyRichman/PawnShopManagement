@@ -223,7 +223,7 @@ public class OverviewPage extends JFrame {
                     // Default rate based on totalPrice
                     if (totalPrice >= 10000) {
                         rate = 1.25;
-                    } else if (totalPrice >= 2500) {
+                    } else if (totalPrice > 2500) {
                         rate = 1.5;
                     } else {
                         rate = 2.0;
@@ -518,7 +518,11 @@ public class OverviewPage extends JFrame {
                     JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
                 }
 
-                JLabel success = new JLabel("<html>ไถ่ถอนตั๋วหมายเลข "+ticketNo+" สำเร็จ<br>จำนวนเงินต้น: "+price+" บาท<br>ดอกเบี้ย: "+(total-price)+" บาท<br>รวมทั้งหมด "+total+" บาท</html>");
+                JLabel success = new JLabel("<html>ไถ่ถอนตั๋วหมายเลข "+ticketNo+" สำเร็จ" +
+                "<br>ระยะเวลาจำนำ: "+ datediff[0] + " เดือน " + + datediff[1] + " วัน" +
+                "<br>จำนวนเงินต้น: " +price+ " บาท" + 
+                "<br>ดอกเบี้ย: "+(total-price)+" บาท" +
+                "<br>รวมทั้งหมด "+total+" บาท</html>");
                 success.setFont(new Font("TH Sarabun New", Font.BOLD, 18));
                 
                 JOptionPane.showMessageDialog(this, success);
@@ -620,7 +624,7 @@ public class OverviewPage extends JFrame {
                             };
                             try (Connection conn3 = db_Connection.getConnection();
                                 PreparedStatement pstmt3 = conn3.prepareStatement(
-                                    "INSERT INTO ticket(_No, issueDate, firstName, lastName, phoneNumber, totalPrice, duration, dueDate, status, old_ticket_No) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                                    "INSERT INTO ticket(_No, issueDate, firstName, lastName, phoneNumber, totalPrice, rate, duration, dueDate, status, old_ticket_No) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                                 )) {
                                     
                                     pstmt3.setString(1, add0s(_No));
@@ -629,10 +633,11 @@ public class OverviewPage extends JFrame {
                                     pstmt3.setString(4, row[2].toString());
                                     pstmt3.setString(5, row[3].toString());
                                     pstmt3.setInt(6, (int) row[4]);
-                                    pstmt3.setInt(7, (int) row[5]);
-                                    pstmt3.setDate(8, Date.valueOf(row[6].toString()));
-                                    pstmt3.setString(9, "อยู่ระหว่างจำนำ");
-                                    pstmt3.setString(10, ticketNo);
+                                    pstmt3.setDouble(7, rate);
+                                    pstmt3.setInt(8, (int) row[5]);
+                                    pstmt3.setDate(9, Date.valueOf(row[6].toString()));
+                                    pstmt3.setString(10, "อยู่ระหว่างจำนำ");
+                                    pstmt3.setString(11, ticketNo);
 
                                     pstmt3.executeUpdate();
                             }
@@ -640,14 +645,17 @@ public class OverviewPage extends JFrame {
 
                     } catch (SQLException e) {
                         JLabel fail = new JLabel(e.getMessage());
-                        // JLabel fail = new JLabel("ไม่พบข้อมูลตั๋ว หรือข้อมูลไม่ถูกต้อง");
                         fail.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
                         JOptionPane.showMessageDialog(this, fail, "Error", JOptionPane.ERROR_MESSAGE);
                     }
 
                     copyObjs(ticketNo, add0s(_No));
 
-                    JLabel success = new JLabel("<html>ต่ออายุตั๋วหมายเลข "+ticketNo+" สำเร็จ<br>จำนวนเงินต้น: "+pawnPrice+" บาท<br>ดอกเบี้ย: "+(totalPrice-pawnPrice)+" บาท<br>รวมทั้งหมด "+totalPrice+" บาท</html>");
+                    JLabel success = new JLabel("<html>ต่ออายุตั๋วหมายเลข "+ticketNo+" สำเร็จ"+
+                    "<br>ระยะเวลาจำนำ: "+ datediff[0] + " เดือน " + + datediff[1] + " วัน" +
+                    "<br>จำนวนเงินต้น: "+pawnPrice+" บาท"+
+                    "<br>ดอกเบี้ย: "+(totalPrice-pawnPrice)+" บาท"+
+                    "<br>รวมทั้งหมด "+totalPrice+" บาท</html>");
                     success.setFont(new Font("TH Sarabun New", Font.BOLD, 18));
                     
                     JOptionPane.showMessageDialog(this, success);
@@ -679,7 +687,7 @@ public class OverviewPage extends JFrame {
         rateField.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
         durField.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
 
-        int req = 0, dur = 0; double newRate = 0.0;
+        int req = 0, dur = 0; String newRate = "";
 
         Object message[] = {reqLabel, reqField, rateLabel, rateField, durLabel, durField};
         int option = JOptionPane.showConfirmDialog(this, message, "เพิ่มเงินต้น", JOptionPane.YES_NO_OPTION);
@@ -688,7 +696,7 @@ public class OverviewPage extends JFrame {
         if (option == JOptionPane.YES_OPTION) {
             req = Integer.parseInt(reqField.getText());
             dur = Integer.parseInt(durField.getText());
-            newRate = Double.parseDouble(rateField.getText());
+            newRate = rateField.getText();
 
             int _No = getLatestNo();
 
@@ -710,10 +718,10 @@ public class OverviewPage extends JFrame {
                 int datediff[] = getDateDiff(issueDate);
                 int totalPrice = computeInterest(pawnPrice, rate, datediff);
 
-                if (newRate == ) {
+                if (newRate.isEmpty()) {
                     if (pawnPrice+req >= 10000) {
                         rate = 1.25;
-                    } else if (pawnPrice+req >= 2500) {
+                    } else if (pawnPrice+req > 2500) {
                         rate = 1.5;
                     } else {
                         rate = 2.0;
@@ -780,11 +788,12 @@ public class OverviewPage extends JFrame {
 
                     
                     JLabel success = new JLabel("<html>เพิ่มเงินตั๋วหมายเลข " + ticketNo + "<br>" +
-                            "จำนวน " + req + " สำเร็จ<br>" +
-                            "จำนวนเงินต้นหลังเพิ่ม: " + (pawnPrice + req) + " บาท<br>" +
-                            "จำนวนเงินต้นที่เพิ่มหลังหักดอกเบี้ย: " + ((req) - (totalPrice - pawnPrice)) + " บาท<br>" +
-                            "ดอกเบี้ย: " + ((totalPrice - pawnPrice)) + " บาท<br>" +
-                            "รวมทั้งหมด " + totalPrice + " บาท</html>");
+                        "จำนวน " + req + " สำเร็จ<br>" +
+                        "ระยะเวลาจำนำ: "+ datediff[0] + " เดือน " + + datediff[1] + " วัน<br>" +
+                        "จำนวนเงินต้นหลังเพิ่ม: " + (pawnPrice + req) + " บาท<br>" +
+                        "จำนวนเงินต้นที่เพิ่มหลังหักดอกเบี้ย: " + ((req) - (totalPrice - pawnPrice)) + " บาท<br>" +
+                        "ดอกเบี้ย: " + ((totalPrice - pawnPrice)) + " บาท<br>" +
+                        "รวมทั้งหมด " + totalPrice + " บาท</html>");
 
                     success.setFont(new Font("TH Sarabun New", Font.BOLD, 18));
                     JOptionPane.showMessageDialog(this, success);
@@ -832,7 +841,7 @@ public class OverviewPage extends JFrame {
         rateField.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
         durField.setFont(new Font("TH Sarabun New", Font.PLAIN, 18));
 
-        int req = 0,dur = 0;
+        int req = 0,dur = 0; String newRate = "";
         int option;
         
         do{
@@ -843,6 +852,7 @@ public class OverviewPage extends JFrame {
         if (option == JOptionPane.YES_OPTION) {
             req = Integer.parseInt(reqField.getText());
             dur = Integer.parseInt(durField.getText());
+            newRate = rateField.getText();
 
             int _No = getLatestNo();
 
@@ -866,11 +876,11 @@ public class OverviewPage extends JFrame {
                 if(totalPrice == pawnPrice){
                     loadTicket();
                 }else{
-                    if ((rateField.getText()).isEmpty()) {
+                    if (newRate.isEmpty()) {
                 
                         if (pawnPrice-req >= 10000) {
                             rate = 1.25;
-                        } else if (pawnPrice-req >= 2500) {
+                        } else if (pawnPrice-req > 2500) {
                             rate = 1.5;
                         } else {
                             rate = 2.0;
@@ -905,7 +915,7 @@ public class OverviewPage extends JFrame {
                                 rs1.getString("phoneNumber"),
                             };
                             try (Connection conn3 = db_Connection.getConnection();
-                                PreparedStatement pstmt3 = conn.prepareStatement("INSERT INTO ticket(_No, issueDate, firstName, lastName, phoneNumber, totalPrice, duration, dueDate, status, old_ticket_No) VALUE (?, ?, ?, ?, ?, ?, ?, ADDDATE(CURDATE(), INTERVAL "+dur+" MONTH), ?, ?)")) {
+                                PreparedStatement pstmt3 = conn.prepareStatement("INSERT INTO ticket(_No, issueDate, firstName, lastName, phoneNumber, totalPrice, rate, duration, dueDate, status, old_ticket_No) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ADDDATE(CURDATE(), INTERVAL "+dur+" MONTH), ?, ?)")) {
                                     
                                     pstmt3.setString(1, add0s(_No));
                                     pstmt3.setString(2, BEtoAD(today));
@@ -913,9 +923,10 @@ public class OverviewPage extends JFrame {
                                     pstmt3.setString(4, row[1].toString());
                                     pstmt3.setString(5, row[2].toString());
                                     pstmt3.setInt(6, pawnPrice-req);
-                                    pstmt3.setInt(7, dur);
-                                    pstmt3.setString(8, "อยู่ระหว่างจำนำ");
-                                    pstmt3.setString(9, ticketNo);
+                                    pstmt3.setDouble(7, rate);
+                                    pstmt3.setInt(8, dur);
+                                    pstmt3.setString(9, "อยู่ระหว่างจำนำ");
+                                    pstmt3.setString(10, ticketNo);
 
                                     pstmt3.executeUpdate();
                             }
@@ -930,11 +941,12 @@ public class OverviewPage extends JFrame {
                     copyObjs(ticketNo, add0s(_No));                
 
                     JLabel success = new JLabel("<html>ลดเงินต้นตั๋วหมายเลข " + ticketNo + "<br>" +
-                            "จำนวน " + req + " สำเร็จ<br>" +
-                            "จำนวนเงินต้นหลังลด: " + (totalPrice - req) + " บาท<br>" +
-                            "รับเงินทั้งหมด: " + (req + (totalPrice - pawnPrice)) + " บาท<br>" +
-                            "ดอกเบี้ย: " + (totalPrice - pawnPrice) + " บาท<br>" +
-                            "รวมทั้งหมด " + totalPrice + " บาท</html>");
+                        "จำนวน " + req + " สำเร็จ" +
+                        "<br>ระยะเวลาจำนำ: "+ datediff[0] + " เดือน " + + datediff[1] + " วัน<br>" +
+                        "จำนวนเงินต้นหลังลด: " + (pawnPrice - req) + " บาท<br>" +
+                        "รับเงินทั้งหมด: " + (req + (totalPrice - pawnPrice)) + " บาท<br>" +
+                        "ดอกเบี้ย: " + (totalPrice - pawnPrice) + " บาท<br>" +
+                        "รวมทั้งหมด " + totalPrice + " บาท</html>");
 
                     success.setFont(new Font("TH Sarabun New", Font.BOLD, 18));
                     JOptionPane.showMessageDialog(this, success);
@@ -1019,12 +1031,15 @@ public class OverviewPage extends JFrame {
                     interest = roundUp((int)(principal * 0.01));
                 } else if (principal >= 11000 && principal <= 19000) {
                     interest = roundUp((int)(principal * 0.0075));
+                } else if(principal > 19000){
+                    /* TODO: ต้องหาอัตราดอกเบี้ยของยอดที่เกิน 19000 ขึ้นไป */
                 } else {
                     interest = roundUp((int)(principal * rate));
                 }
+                
             }
             // ไถ่คืนภายใน 10 วัน
-            else if (months == 0 && days <= 10) {
+            else if (months == 0 && (days> 3 &&days <= 10)) {
                 interest = roundUp((int)(principal * 0.01));
             }
             // ปกติ: คิดตามจำนวนเดือนและมีเศษวัน = +1 เดือน
