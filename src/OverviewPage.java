@@ -1032,7 +1032,7 @@ public class OverviewPage extends JFrame {
                 } else if (principal >= 11000 && principal <= 19000) {
                     interest = roundUp((int)(principal * 0.0075));
                 } else if(principal > 19000){
-                    /* TODO: ต้องหาอัตราดอกเบี้ยของยอดที่เกิน 19000 ขึ้นไป */
+                    interest = roundUp((int)(principal * 0.0063));
                 } else {
                     interest = roundUp((int)(principal * rate));
                 }
