@@ -1,7 +1,7 @@
-DROP DATABASE `Yaowarat Pawn Shop`;
-CREATE DATABASE IF NOT EXISTS `Yaowarat Pawn Shop`;
+DROP DATABASE `yps`;
+CREATE DATABASE IF NOT EXISTS `yps`;
 
-USE `Yaowarat Pawn Shop`;
+USE `yps`;
 
 DROP TABLE ticket;
 CREATE TABLE ticket (
